@@ -1,5 +1,5 @@
 // SSD1306 routines for methane feather recorder
-
+#ifdef USE_SSD1306
 #include  <Wire.h>
 #include  <Adafruit_GFX.h>
 #include  <Adafruit_SSD1306.h>
@@ -144,4 +144,4 @@ void ssd1306_printf(const char *format,...) {
   }
   display.display();
 }
-
+#endif

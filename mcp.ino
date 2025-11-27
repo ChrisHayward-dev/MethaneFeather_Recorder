@@ -92,7 +92,11 @@ void mcp_printVals(Stream *device) {
   for(int k=1;k<5;k++) {
     mcp_value[k] = mcp_avg[k]/mcp_nsamples;
     mcp_avg[k] = 0;
-    device->print(mcp_value[k]*mcpLSB,6);
+    if(k==2) {
+      device->print(mcp_value[k]*mcpLSB*3.378,6);
+    } else {
+      device->print(mcp_value[k]*mcpLSB,6);
+    }
     device->print(",");
   }
   mcp_nsamples = 0;
@@ -173,7 +177,7 @@ void mcp_setup() {
   mcpReadChannel(3,"Bridge Reference");
   mcpReadChannel(4,"Internal TGS2611");
 
-  Serial.print("Heater Voltage: ");Serial.print(mcpLSB * mcp_value[2] * 3.16); Serial.println(" volts");
+  Serial.print("Heater Voltage: ");Serial.print(mcpLSB * mcp_value[2] * 3.378); Serial.println(" volts");
   return;
 }
 

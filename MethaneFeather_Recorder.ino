@@ -5,7 +5,16 @@
 #include  <RTCZero.h>
 #include  <Adafruit_GPS.h>
 #include  <I2CScanner.h>
+
+//#define USE_SSD1306
+//#define EST_CH4CONC
+
+#ifdef USE_SSD1306
 #include  <Adafruit_SSD1306.h>
+#define DISP(...) __VA_ARGS__
+#else
+#define DISP(...) /* __VA_ARGS__ */
+#endif
 
 I2CScanner  i2cScanner;
 
@@ -15,9 +24,13 @@ I2CScanner  i2cScanner;
 #warning    No support for USB disk!!! use TINYUSB!
 #endif
 
-#define   DISP(...)    ssd1306_printf(__VA_ARGS__) 
+
+
 /* version report */
 const char *versions[] = {
+  "Version 0.15",
+  " - conditional compilation for SSD1306",
+  " - TGS2611 second batch is group 13 R5%(2500ppm) 3.09K",
   "Version 0.14",
   " - Added estimated CH4 concentration",
   "Version 0.13",
@@ -45,6 +58,7 @@ const int16_t nversions = sizeof(versions) / sizeof(char *);
 #define R_REF             20000.0   // reference resistor for system 2 (rev 3) addr 28FF4FD950160383
 #define R_SERIES          10000.0   // Series resistance to A2D chip input
 #define MAX_GPS_WAIT      1800      // maximum wait time for GPS  
+//#define MAX_GPS_WAIT      10      // maximum wait time for GPS  (used for testing w/o waiting for GPS lock)
 #define NUM_GPS_FIXES     60        // number of valid GPS fixes required
 #define INPUT_IMPEDANCE   2250000.0 // input impedance of the MCP3424 (from the datasheet ... really something more like 1.67M)
 #define MAX_SAMPLES_PER_READING 16  // maximum number of samples to average for one reading
@@ -67,8 +81,8 @@ const int16_t nversions = sizeof(versions) / sizeof(char *);
 const uint8_t redLed  = 13;    // Standard Red Led   : Pin26 PA17
 const uint8_t greenLed = 8;    // Standard Green Led : Pin11 PA06
 
-const char *header = "Time,Time,extGas,heater,ref,intGas,TGStemp,T2,T3,T4,T5,bmeTemp,bmePres,bmeRH,bmeGas,bme.alt,lat,lon,battery,Rgas";
-const char *units  = "sec,datetime,uV,uV,uV,uV,dC,dC,dC,dC,dC,dC,hPa,%,kOhm,m,N,E,volts,ohms";
+const char *header = "Time,Time,extGas,heater,ref,intGas,TGStemp,T2,T3,T4,T5,bmeTemp,bmePres,bmeRH,bmeGas,bme.alt,lat,lon,battery,Rgas,Rgas2";
+const char *units  = "sec,datetime,uV,uV,uV,uV,dC,dC,dC,dC,dC,dC,hPa,%,kOhm,m,N,E,volts,ohms,ohms";
 
 uint32_t  timer =  millis();
 File dataFile;
@@ -135,7 +149,9 @@ void setup(void)
   #else
   #warning Skipping USB drive
   #endif
-  ssd1306_setup();
+
+  
+  DISP(ssd1306_setup());
  
   DISP("USB Drive Ejt");
   Serial.begin(9600);
@@ -226,13 +242,14 @@ void setup(void)
       delay(200);
     }
   }
-  dataFile.println(header);
-  dataFile.println(units);
-  dataFile.flush();
+  
   delay(2000);    // Pause to allow someone to look at display
 
   gps_setup();
-  ds_setup(&dataFile);
+  ds_setup(&dataFile);        // do the ds_setup first so the dataFile headers come after the therometer addresses
+  dataFile.println(header);
+  dataFile.println(units);
+  dataFile.flush();
   bme_setup();
   mcp_setup();
 
@@ -241,14 +258,19 @@ void setup(void)
 
   enable5V(true);
   enableHeater(true);
-  Serial.println("Waiting for 5V power to stabilize");
+  Serial.println("Waiting 60 seconds for 5V power to stabilize");
   DISP("5V Pwr 60 sec");
-  delay(60000);
+  for(int k=0;k<60;k++) {
+    digitalWrite(redLed,!digitalRead(redLed));
+    delay(1000);
+  }
   mcp_setup();
+  Serial.println("5 second test of Fan1");
   digitalWrite(pinFan1, HIGH);
   DISP("Fan 1");
-  delay(3000);
+  delay(5000);
   digitalWrite(pinFan1, LOW);
+  Serial.println("5 second test of Fan2");
   digitalWrite(pinFan2, HIGH);
   DISP("Fan 2");
   delay(3000);
@@ -327,7 +349,7 @@ void setup(void)
   exciteSet(1000);
   enable5V(true);
   enableHeater(true);
-  ssd1306_printBig("Start");
+  DISP(ssd1306_printBig("Start"));
 }
 
 void loop(void) {
@@ -380,14 +402,14 @@ void loop(void) {
           break;
         case PLOT_CH4:
           if(Rgas>0) {
-              ssd1306_plot(Rgas,logRch4,logRch4p);
-              ssd1306_labelPlot("CH4");
+              DISP(ssd1306_plot(Rgas,logRch4,logRch4p));
+              DISP(ssd1306_labelPlot("CH4"));
           };
           break;
         case PLOT_H2:
           if(RgasH>0) {
-            ssd1306_plot(RgasH,logRh2,logRh2p);
-            ssd1306_labelPlot("H2");
+            DISP(ssd1306_plot(RgasH,logRh2,logRh2p));
+            DISP(ssd1306_labelPlot("H2"));
           };
           break;
         case TAKE_DATA:
@@ -419,11 +441,12 @@ void loop(void) {
     gps_printLoc(out);
     soh_printBattery(out);
     mcp_printGas(out);
-    
-    float c=concen(Rgas/1000.0,rh,temp,19.0);
+
+    int SensorID = 12;
+    float c=concen(SensorID,Rgas/1000.0,rh,temp,19.0);
     char bufr[30];
     snprintf(bufr,sizeof(bufr),"%.1f",c);
-    ssd1306_printBig(bufr);
+    DISP(ssd1306_printBig(bufr));
     
     out->println(-999);
     out->flush();

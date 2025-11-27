@@ -80,18 +80,29 @@ uint8_t dsNodeNumber(){
         }
       }
     }
+    Serial.print("Unknown Thermometer ");Serial.print(k);Serial.println(":");
+    Serial.print("{");
+    for(int k3=0;k3<8;k3++) {
+      Serial.print("0x");
+      if(thermometer[k][k3]<16) Serial.print("0");
+      Serial.print(thermometer[k][k3],HEX);
+      if(k3<7) Serial.print(",");
+    }
+    Serial.println("}");
+    
   }
   return(0);
 }
 bool dsPrintAddr( uint8_t *addr, Stream *dev ) {
+  dev->print("{");
   for (uint8_t i = 0; i < 8; i++) {
     // zero pad the address if necessary
     dev->print("0x");
     if (addr[i] < 16) Serial.print("0");
     dev->print(addr[i], HEX);
-    dev->print(",");
+    if(i<7)dev->print(",");
   }
-  dev->println();
+  dev->println("}");
   return(true);
 }
 

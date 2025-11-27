@@ -16,8 +16,8 @@ void USBdrive()
   USBdrive_setup();
   lastChange = millis();
   startTime = millis();
-  ssd1306_setup();
-  ssd1306_printBig("USB D");
+  DISP(ssd1306_setup());
+  DISP(ssd1306_printBig("USB D"));
   while(!unmount) {
     if ( changed )
     {
