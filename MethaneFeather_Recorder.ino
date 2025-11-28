@@ -81,8 +81,8 @@ const int16_t nversions = sizeof(versions) / sizeof(char *);
 const uint8_t redLed  = 13;    // Standard Red Led   : Pin26 PA17
 const uint8_t greenLed = 8;    // Standard Green Led : Pin11 PA06
 
-const char *header = "Time,Time,extGas,heater,ref,intGas,TGStemp,T2,T3,T4,T5,bmeTemp,bmePres,bmeRH,bmeGas,bme.alt,lat,lon,battery,Rgas,Rgas2";
-const char *units  = "sec,datetime,uV,uV,uV,uV,dC,dC,dC,dC,dC,dC,hPa,%,kOhm,m,N,E,volts,ohms,ohms";
+const char *header = "Time,Time,extGas,heater,ref,intGas,TGStemp,T2,T3,T4,T5,bmeTemp,bmePres,bmeRH,bmeGas,bme.alt,lat,lon,battery,Rgas,Rgas2,EstCH4";
+const char *units  = "sec,datetime,uV,uV,uV,uV,dC,dC,dC,dC,dC,dC,hPa,%,kOhm,m,N,E,volts,ohms,ohms,ppm";
 
 uint32_t  timer =  millis();
 File dataFile;
@@ -171,7 +171,7 @@ void setup(void)
   for(int k=0;k<nversions;k++) {
     Serial.println(versions[k]);
   }
-
+  haveBattery = checkBattery();
   delay(5000);  // allow time for SSSD1306 display to be read
   // Initialize the I2C scanner for gps setup and ssd1306 setup
   
@@ -442,11 +442,12 @@ void loop(void) {
     soh_printBattery(out);
     mcp_printGas(out);
 
-    int SensorID = 12;
-    float c=concen(SensorID,Rgas/1000.0,rh,temp,19.0);
+    int SensorID = 13;
+    float c=CH4concen(SensorID,Rgas/1000.0,rh,temp,19.0);
     char bufr[30];
     snprintf(bufr,sizeof(bufr),"%.1f",c);
     DISP(ssd1306_printBig(bufr));
+    concen_printGas(out,c);
     
     out->println(-999);
     out->flush();

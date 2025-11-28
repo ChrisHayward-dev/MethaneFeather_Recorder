@@ -18,8 +18,12 @@
   float K  = 0.6696;  // intersection of humidition correction
   float C0 = 3.0; // CH4 ppm in ambient conditions
 
+void concen_printGas(Stream *device,float c) {
+  device->print(c);
+  device->print(",");
+}
 
-float concen(int SensorID,float Rx,float rh,float T,float R0) {
+float CH4concen(int SensorID,float Rx,float rh,float T,float R0) {
   switch (SensorID) {
     case 12:
     Rp = 22.9694;
